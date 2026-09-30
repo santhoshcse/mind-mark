@@ -2,9 +2,9 @@
 
 ## Project Context
 
-Mind Mark is currently a documentation-stage project for a local-first bookmark manager. Read `requirements.md`, `high-level-plan.md`, `detailed-plan.md`, and `architecture.md` before making architectural or product-scope changes.
+Mind Mark is an early implementation of a local-first bookmark manager. Read `requirements.md`, `high-level-plan.md`, `detailed-plan.md`, and `architecture.md` before making architectural or product-scope changes.
 
-The agreed starting stack is Tauri 2, React/TypeScript, Rust, and SQLite/FTS5. This is a design baseline; do not claim components exist until they are implemented. The initial target is Windows, Chrome, and a local database.
+The stack is Tauri 2, React/TypeScript, Rust, and SQLite/FTS5. The initial target is Windows, Chrome, and a local database. Current code lives in `src/`, `src-tauri/src/`, and the platform-independent `src-tauri/core/` crate.
 
 ## Product Constraints
 

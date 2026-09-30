@@ -11,6 +11,10 @@
 
 This stack is a recommendation for a Windows-first desktop application with a plausible path to other desktop operating systems. Keep the application as a modular monolith. Do not add network services, cloud dependencies, or separate deployable services to solve a local-database problem.
 
+### Implementation Status
+
+The first implementation covers the Tauri/React shell, core SQLite schema/startup, Chrome profile discovery and read-only idempotent sync, and profile/folder/bookmark CRUD with tags and categories. The frontend build passes. The full desktop build is blocked in WSL by missing GTK/WebKit development packages; the latest CRUD-specific Rust test was skipped after its deadlock fix and remains to be rerun.
+
 ### Architectural Boundaries
 
 Keep business rules independent from Tauri commands, React components, Chrome file paths, and SQLite details.
@@ -28,34 +32,20 @@ Introduce interfaces for real replacement points, not every internal function. K
 ```text
 mind-mark/
   src/                              # React + TypeScript UI
-    app/                            # App bootstrap, routing, global state
-    features/
-      bookmarks/                    # Tree/list, detail, editing
-      search/                       # Query, filters, result views
-      profiles/                     # Chrome sources and app scopes
-      categories/
-      tags/
-      imports/                      # Import/export flows and reports
-      health/                       # Database/index checks and repair actions
-    shared/                         # Reusable UI, typed command client
+    App.tsx                         # Desktop UI and Chrome sync screen
+    features/bookmarks/             # Profile/tree navigation and bookmark CRUD
   src-tauri/
-    src/
-      domain/                       # Entities, value types, invariants
-      application/                  # Use cases and ports
-      infrastructure/
-        chrome/                     # Profile discovery, snapshot parser
-        sqlite/                     # Connection, repositories, FTS5
-        file_formats/               # JSON and CSV adapters
-      commands/                     # Tauri command handlers
-      lib.rs
-    migrations/                     # Versioned SQL migrations
-    tests/                          # Rust integration tests and fixtures
-  tests/
-    fixtures/                       # Sanitized bookmark and import samples
-  docs/                             # Format contracts and architecture decisions
+    src/lib.rs                      # Tauri initialization and command handlers
+    core/
+      Cargo.toml                    # Platform-independent core crate
+      src/domain.rs                 # Domain/request/response types
+      src/chrome.rs                 # Chrome discovery and snapshot parsing
+      src/database.rs               # SQLite repositories and use cases
+      src/error.rs                  # Core errors
+      migrations/0001_initial.sql   # Versioned initial database schema
 ```
 
-Keep unit tests near Rust modules where useful and integration tests at the application/SQLite boundary. Adjust names to the scaffolding conventions after the stack is confirmed.
+Keep core unit tests near Rust modules and add integration tests at the SQLite boundary as features grow. This tree reflects the current implementation; add new modules when needed rather than creating unused future placeholders.
 
 ## 3. Data Model
 

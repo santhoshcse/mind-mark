@@ -1,52 +1,64 @@
 # Mind Mark
 
-Mind Mark is a planned local-first desktop application for importing, organizing, and searching a large bookmark collection. The initial target is Windows, local Chrome profiles, and SQLite.
+Mind Mark is a local-first Windows desktop app for importing, organizing, and managing a large bookmark collection. The initial source is local Chrome profiles and the app database is SQLite.
 
-> **Project status:** Planning stage. The application has not been scaffolded yet. The stack and architecture below are the agreed starting direction, not implemented features.
+## Current Status
 
-## Goals
+The Tauri 2 + React/TypeScript + Rust scaffold is in place. The initial SQLite schema and startup initialization, read-only Chrome profile discovery/sync, profile/folder navigation, and bookmark create/edit/archive with categories and tags have been implemented. Search, JSON/CSV import/export, deduplication, and health tools remain future phases.
 
-- Safely bring bookmarks from one or more local Chrome profiles into Mind Mark.
-- Preserve the imported folder tree while adding independent categories and tags.
-- Make a collection of several thousand bookmarks practical to search and manage.
-- Keep bookmark data local by default and make imports, merges, and recovery understandable.
-- Leave clear extension points for future browsers, operating systems, storage providers, and bidirectional sync.
+The React/TypeScript production build passes. Core Rust tests passed for migrations and Chrome parsing/idempotent sync. A bookmark CRUD test exposed a mutex deadlock that has been repaired, but that specific test has not yet been rerun. A full Tauri build is not currently verified: the available WSL environment is missing GTK/WebKit development dependencies, and the Windows Rust toolchain is unavailable.
 
 ## Initial Scope
 
 - **Platform:** Windows desktop.
-- **Browser source:** Chrome profiles on the local machine.
-- **Storage:** Local SQLite database.
-- **Sync:** One-way, read-only intake from Chrome. Chrome continues to handle its own Google account synchronization. Mind Mark will not write to Chrome's bookmark files or use Google account APIs in the initial release.
-- **Search:** Indexed full-text search first; vector/semantic search is deferred.
+- **Browser:** Chrome profiles on the local machine.
+- **Storage:** Local SQLite with versioned migrations and FTS5 indexing.
+- **Sync:** One-way, read-only intake from Chrome snapshots. Chrome remains responsible for Google account sync; Mind Mark does not write to Chrome files or call Google account APIs.
+- **Profiles:** Chrome sources map to separate Mind Mark app profiles; app profiles can also be created independently.
+- **Search:** Full-text search is planned; semantic/vector search is deferred.
 
-Planned first-release capabilities include bookmark-tree browsing, multi-profile source management, categories, tags, filters, JSON/CSV import and export, duplicate suggestions with user-reviewed merge, configuration, health checks, and safe concurrent access.
+## Implemented in the Foundation
 
-## Architecture Direction
+- Discover local Chrome `Default` and `Profile N` directories containing bookmark data.
+- Parse nested Chrome bookmark folders and preserve stable source IDs and sibling order.
+- Repeat sync without duplicating bookmarks; report malformed and missing/stale source entries without deleting app records.
+- Store app profiles, sources, folders, bookmarks, tags, categories, and sync runs in SQLite.
+- Browse profiles and folders; create, edit, and archive bookmarks while managing tags and categories.
 
-The proposed stack is Tauri 2, React/TypeScript, Rust, and SQLite with FTS5. The application should begin as a modular monolith: keep domain and application rules separate from the desktop UI, Chrome file access, persistence, and search adapters. See [architecture.md](architecture.md) for boundaries, data semantics, and the proposed project structure.
-
-## Documentation
-
-- [Requirements](requirements.md): initial product requirements and future scope.
-- [High-level plan](high-level-plan.md): MoSCoW priorities and delivery phases.
-- [Detailed plan](detailed-plan.md): implementation sequence and acceptance checks.
-- [Architecture](architecture.md): technical design and extension points.
-- [Claude Code guidance](CLAUDE.md): repository-specific expectations for coding work.
+These features are early implementation and have not yet been validated in a complete Windows desktop runtime.
 
 ## Development
 
-The repository is currently documentation-only. There is no application source, package manifest, test suite, or build command yet. Development setup instructions should be added when the agreed stack is scaffolded and its actual commands are known.
+Install frontend dependencies and build the React application from the repository root:
 
-## Data Safety Principles
+```sh
+npm install
+npm run build
+```
 
-- Never modify Chrome's live bookmark files in the initial release.
-- A bookmark absent from a Chrome snapshot must not silently delete app data.
-- Repeated imports should be idempotent and report their results.
-- Keep original URLs and source provenance; use normalized values only for matching.
-- Require user review for merges and avoid silent destructive deduplication.
-- Treat bookmark data as private browsing history; do not include full titles or URLs in routine logs.
+Run the Rust core tests in WSL from this repository's mounted path:
 
-## Future Scope
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml -p mind-mark-core
+```
 
-Potential later work includes other browsers and operating systems, cloud metadata/vector storage, bidirectional sync with explicit conflict/deletion handling, scheduled sync, and semantic/vector search. These are not prerequisites for the initial local release.
+The Tauri desktop runtime additionally requires platform prerequisites. For Linux/WSL, install the Tauri-documented GTK, WebKitGTK, and `pkg-config` development packages before attempting a full desktop build. Windows packaging should be built with the Windows Tauri/Rust prerequisites.
+
+## Data Safety
+
+- Chrome access is read-only in the initial release.
+- Missing items in a Chrome snapshot are reported, not deleted.
+- Sync is keyed by stable Chrome source IDs and should be repeatable.
+- Original URLs and source provenance are retained; merges are not yet implemented.
+- Bookmark content is private browsing history; avoid logging titles and full URLs.
+
+## Documentation
+
+- [Requirements](requirements.md)
+- [High-level plan](high-level-plan.md)
+- [Detailed plan](detailed-plan.md)
+- [Architecture](architecture.md)
+- [Agent guidance](AGENTS.md)
+- [Claude Code guidance](CLAUDE.md)
+
+Future scope includes other browsers and operating systems, cloud metadata/vector storage, semantic search, scheduled sync, and bidirectional sync with explicit conflict and deletion rules.

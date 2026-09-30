@@ -2,7 +2,7 @@
 
 ## Status and Scope
 
-This document records the proposed architecture for the initial Mind Mark release. The repository is currently at the planning stage; the structure and components below are design targets, not existing code.
+This document describes the architecture of the initial Mind Mark implementation. The repository now has a Tauri 2 + React/TypeScript desktop scaffold, a Rust core crate, and SQLite-backed Chrome intake and bookmark management. Some planned features remain unimplemented.
 
 Initial support is Windows, Chrome, and local SQLite. The application imports Chrome bookmarks one way and does not modify Chrome data. Future operating systems, browsers, cloud storage, vector search, and bidirectional sync must not become dependencies of the initial release.
 
@@ -26,6 +26,14 @@ Initial support is Windows, Chrome, and local SQLite. The application imports Ch
 | Initial vector search | Deferred; no vector dependency in MVP |
 
 Treat this stack as the agreed starting direction. Confirm specific libraries and versions during scaffolding and record consequential changes here.
+
+## Implementation Status
+
+- **Foundation:** Tauri/React scaffold, Rust core crate, SQLite startup initialization, and the first schema migration are present.
+- **Chrome intake:** Windows profile discovery, read-only snapshot parsing, tree preservation, transactional idempotent sync, and non-destructive stale reporting are present.
+- **Bookmark management:** App-profile selection, folder navigation, bookmark create/edit/archive, and tags/categories are present.
+- **Not yet implemented:** FTS5 query UI, JSON/CSV import/export, duplicate review/merge, health checks, backup/restore, vector search, and bidirectional sync.
+- **Validation caveat:** Frontend production builds pass. The full Tauri desktop build needs platform GTK/WebKit dependencies under WSL; the latest bookmark CRUD Rust test was not rerun after its mutex fix.
 
 ## System Context
 
