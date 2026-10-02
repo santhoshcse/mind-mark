@@ -444,7 +444,8 @@ impl Database {
         connection.busy_timeout(Duration::from_secs(5))?;
         connection.execute_batch("PRAGMA foreign_keys = ON;")?;
         if use_wal {
-            connection.execute_batch("PRAGMA journal_mode = WAL;")?;
+            let _mode: String = connection.query_row("PRAGMA journal_mode = WAL;", [], |row| row.get(0))?;
+            // connection.execute_batch("PRAGMA journal_mode = WAL;")?;
         }
         Self::migrate(connection)?;
         Ok(())

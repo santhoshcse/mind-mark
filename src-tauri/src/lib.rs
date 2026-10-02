@@ -5,16 +5,19 @@ use mind_mark_core::{
 use tauri::{Manager, State};
 
 #[tauri::command]
-fn list_chrome_profiles() -> Result<Vec<ChromeProfile>, String> {
-    mind_mark_core::discover_chrome_profiles().map_err(|error| error.to_string())
+fn list_chrome_profiles(
+    handle: tauri::AppHandle,
+) -> Result<Vec<ChromeProfile>, String> {
+    mind_mark_core::discover_chrome_profiles(&handle).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 fn sync_chrome_profile(
     profile_id: String,
     database: State<'_, Database>,
+    handle: tauri::AppHandle,
 ) -> Result<SyncReport, String> {
-    mind_mark_core::sync_chrome_profile(&database, &profile_id).map_err(|error| error.to_string())
+    mind_mark_core::sync_chrome_profile(&database, &profile_id, &handle).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

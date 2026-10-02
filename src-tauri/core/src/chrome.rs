@@ -5,6 +5,7 @@ use std::{
 };
 
 use serde::Deserialize;
+use tauri::Manager;
 
 use crate::{
     domain::{ChromeProfile, SyncReport},
@@ -55,15 +56,39 @@ struct ChromeNode {
     children: Vec<ChromeNode>,
 }
 
-pub fn discover_chrome_profiles() -> Result<Vec<ChromeProfile>, AppError> {
-    let local_app_data = env::var_os("LOCALAPPDATA").ok_or_else(|| {
-        AppError::InvalidInput("Windows local app data directory is unavailable".into())
-    })?;
-    let root = PathBuf::from(local_app_data)
-        .join("Google")
-        .join("Chrome")
-        .join("User Data");
+pub fn get_chrome_user_data_dir(handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+    if cfg!(target_os = "linux") {
+        let windows_username = "Santhosh.Gnanamani"; 
+        
+        let wsl_windows_path = PathBuf::from(format!(
+            "/mnt/c/Users/{}/AppData/Local/Google/Chrome/User Data",
+            windows_username
+        ));
+        
+        if wsl_windows_path.exists() {
+            return Ok(wsl_windows_path);
+        }
+    }
 
+    // let local_app_data = env::var_os("LOCALAPPDATA").ok_or_else(|| {
+    //     AppError::InvalidInput("Windows local app data directory is unavailable".into())
+    // })?;
+    // let local_app_data = handle.path().app_local_data_dir()
+    // .map_err(|e| AppError::InvalidInput(format!("Data directory unavailable: {}", e)))?;
+    // let root = PathBuf::from(local_app_data)
+    //     .join("Google")
+    //     .join("Chrome")
+    //     .join("User Data");
+    let local_app_data = handle.path().local_data_dir()
+        .map_err(|e| format!("Failed to get local data directory: {}", e))?;
+        
+    Ok(local_app_data.join("Google/Chrome/User Data"))
+}
+
+pub fn discover_chrome_profiles(handle: &tauri::AppHandle) -> Result<Vec<ChromeProfile>, AppError> {
+    let root = get_chrome_user_data_dir(handle)
+        .map_err(|err_msg| AppError::InvalidInput(err_msg.into()))?;
+    println!("Looking for Chrome profiles in: {}", root.display());
     if !root.is_dir() {
         return Ok(Vec::new());
     }
@@ -77,11 +102,13 @@ pub fn discover_chrome_profiles() -> Result<Vec<ChromeProfile>, AppError> {
         }
 
         let name = entry.file_name().to_string_lossy().into_owned();
+        // println!("Folder name: {}", name);
         if name != "Default" && !name.starts_with("Profile ") {
             continue;
         }
 
         let path = entry.path().canonicalize()?;
+        // println!("Processing profile: {}", path.display());
         if !path.starts_with(&canonical_root) || !path.join("Bookmarks").is_file() {
             continue;
         }
@@ -185,8 +212,8 @@ fn parse_children(children: &[ChromeNode], parent_id: &str, parsed: &mut ParsedC
     }
 }
 
-pub fn sync_chrome_profile(database: &Database, profile_id: &str) -> Result<SyncReport, AppError> {
-    let profile = discover_chrome_profiles()?
+pub fn sync_chrome_profile(database: &Database, profile_id: &str, handle: &tauri::AppHandle) -> Result<SyncReport, AppError> {
+    let profile = discover_chrome_profiles(handle)?
         .into_iter()
         .find(|profile| profile.id == profile_id)
         .ok_or_else(|| AppError::InvalidInput("Chrome profile is no longer available".into()))?;
